@@ -37,7 +37,7 @@ module RSpotify
       }
       response = RestClient.post(TOKEN_URI, request_body, RSpotify.send(:auth_header))
       response = JSON.parse(response)
-      @@users_credentials[user_id]['token'] = response['access_token']
+      @@users_credentials[user_id]['access_token'] = response['access_token']
     rescue RestClient::BadRequest => e
       raise e if e.response !~ /Refresh token revoked/
     end
@@ -45,7 +45,7 @@ module RSpotify
 
     def self.oauth_header(user_id)
       {
-        'Authorization' => "Bearer #{@@users_credentials[user_id]['token']}",
+        'Authorization' => "Bearer #{@@users_credentials[user_id]['access_token']}",
         'Content-Type'  => 'application/json'
       }
     end
@@ -53,8 +53,7 @@ module RSpotify
 
     def self.oauth_send(user_id, verb, path, *params)
       RSpotify.send(:send_request, verb, path, *params)
-    rescue RestClient::Unauthorized => e
-      raise e if e.response !~ /access token expired/
+    rescue => e
       refresh_token(user_id)
       params[-1] = oauth_header(user_id)
       RSpotify.send(:send_request, verb, path, *params)
@@ -89,6 +88,8 @@ module RSpotify
         @@users_credentials[@id] = credentials
         @credentials = @@users_credentials[@id]
       end
+
+      raise "Error - User ID cannot be empty." if @id.nil? || @id.empty?
     end
 
     # Creates a playlist in user's Spotify account. This method is only available when the current
